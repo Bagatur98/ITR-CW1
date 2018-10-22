@@ -54,21 +54,22 @@ void setup() {
   size( 520, 590 );
   X_OFFSET = 260;
   Y_OFFSET = 330;
+  
   noStroke();
   // create GUI object
   cp5 = new ControlP5( this );
   
   
   // create buttons
-    cp5.addButton( "OneLinkArm")
+    cp5.addButton( "ONE_LINK")
     .setValue( 0 )
     .setPosition( 10, 10 )
     .setSize( 50, 10 );
-    cp5.addButton( "TwoLinkArm")
+    cp5.addButton( "TWO_LINK")
     .setValue( 0 )
     .setPosition( 70, 10 )
     .setSize( 50, 10 );
-    cp5.addButton( "ThreeLinkArm")
+    cp5.addButton( "THREE_LINK")
     .setValue( 0 )
     .setPosition( 130, 10 )
     .setSize( 50, 10 );
@@ -247,7 +248,7 @@ void setup() {
     .setColor( #ffffff );
 } // end of setup()
 
-void matrixMult( float[][] M1, float M2[][] , int q) {
+void matrixMult( float[][] M1, float[][] M2, int q) {
   float[][] newM1 = {{ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }}; 
   for ( int i=q; i<4; i++ ) {
     for ( int j=0; j<3; j++ ) {
@@ -259,7 +260,7 @@ void matrixMult( float[][] M1, float M2[][] , int q) {
       M1[i][j] = newM1[i][j];
     }
   }
-}
+} // end of matrixMult()
 
 /**
  drawArm()
@@ -373,27 +374,41 @@ public void controlEvent( ControlEvent theEvent ) {
           theta0value.setText( str( THETA1 ));
         }
       } else if ( theEvent.getName() == "theta0input" ) {
+        float currentTheta = theta0;
+        System.out.println(currentTheta);
         theta0 = float( theEvent.getStringValue() );
         if ( Float.isNaN( theta0 )) {
           println( "ERROR in theta0 value" );
         } else {
-          float currentTheta = theta0value.toString().parseFloat();
           theta0input.setFocus( false );
           theta0input.setVisible( false );
           theta0value.setVisible( true );
           theta0value.setText( str( theta0 ));
           // set THETA from user
           THETA1 = theta0;
-          DR = THETA1 - currentTheta;
+          
+          System.out.println(THETA1);
+         // DR = THETA1 - currentTheta;
           // compute P1 --> Forward Kinematics!!
           float oldX = P[0][0];
           float oldY = P[0][1];
           translationMatrix[0][2] = -oldX;
           translationMatrix[1][2] = -oldY;
           matrixMult(P, translationMatrix, 1);
+          System.out.println(P[0][0]);
+          System.out.println(P[0][1]); 
+          rotationMatrix[0][0] = cos(radians(currentTheta));
+          rotationMatrix[1][1] = cos(radians(currentTheta));
+          rotationMatrix[0][1] = sin(radians(DR));
+          rotationMatrix[1][0] = -sin(radians(DR));
+          matrixMult(P, rotationMatrix, 1);
+          System.out.println("P[1][0]" + P[1][0]);
+          System.out.println("P[1][1]" + P[1][1]); 
           
-          rotationMatrix[0][1] = -sin(radians(DR));
-          rotationMatrix[1][0] = sin(radians(DR));
+          rotationMatrix[0][0] = cos(radians(THETA1));
+          rotationMatrix[1][1] = cos(radians(THETA1));
+          rotationMatrix[0][1] = -sin(radians(THETA1));
+          rotationMatrix[1][0] = sin(radians(THETA1));
           matrixMult(P, rotationMatrix, 1);
           
           translationMatrix[0][2] = oldX;
@@ -507,20 +522,20 @@ public void FORWARD_3( int theValue ) {
 } // end of FORWARD callback function()
 
 
-public void OneLinkArm(int theValue) {
+public void ONE_LINK(int theValue) {
   println( "DRAWING 1-LINK ARM" );
   if ( init ) {
     drawArm1();
   }
 }
 
-public void TwoLinkArm(int theValue) {
-  println( "DRAWING21-LINK ARM" );
+public void TWO_LINK(int theValue) {
+  println( "DRAWING 2-LINK ARM" );
   if ( init ) {
     drawArm2();
   }
 }
-public void ThreeLinkArm(int theValue) {
+public void THREE_LINK(int theValue) {
   println( "DRAWING 3-LINK ARM" );
   if ( init ) {
     drawArm3();

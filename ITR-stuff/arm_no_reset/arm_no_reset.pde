@@ -1,4 +1,4 @@
-/**
+ /**
  * arm0.pde
  * sklar/10-oct-2018
  * This program draws a 1-segment arm in the middle of the window.
@@ -76,7 +76,7 @@ void draw() {
   drawArm();
 }
 
-void matrixMult( float[][] M1, float M2[][] , int q) {
+void matrixMult( float[][] M1, float[][] M2, int q) {
   float[][] newM1 = {{ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }}; 
   for ( int i=q; i<4; i++ ) {
     for ( int j=0; j<3; j++ ) {
