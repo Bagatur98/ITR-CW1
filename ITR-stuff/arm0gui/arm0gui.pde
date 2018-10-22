@@ -1,4 +1,4 @@
-/** //<>// //<>//
+/** //<>//
  * arm0gui.pde
  * sklar/12-oct-2018
  * This program draws a 1-segment arm in the middle of the window and includes GUI elements for user input.
@@ -26,10 +26,12 @@ float L3 = 50;
 float THETA1 = 0;
 float THETA2 = 0;
 float THETA3 = 0;
+float DR;
 // define a list of points for the arm joints.     
 // note that we use homogeneous coordinates in 2D.
 float P[][] = {{ X, Y, 1 }, { X+L1, Y, 1 }, {X+L1+L2, Y, 1 }, {X+L1+L2+L3, Y, 1 }}; 
-
+float[][] rotationMatrix = {{cos(radians(DR)), 1, 0}, {1, cos(radians(DR)), 0}, {0, 0, 1}};
+float[][] translationMatrix = {{ 1, 0, 1 }, { 0, 1, 1 }, { 0, 0, 1 }};
 // define offset values so that (0,0) is in the middle of the display window.
 float X_OFFSET, Y_OFFSET;
 
@@ -58,25 +60,33 @@ void setup() {
   
   
   // create buttons
-    cp5.addButton( "1-LINK")
+    cp5.addButton( "OneLinkArm")
     .setValue( 0 )
     .setPosition( 10, 10 )
     .setSize( 50, 10 );
-    cp5.addButton( "2-LINK")
+    cp5.addButton( "TwoLinkArm")
     .setValue( 0 )
     .setPosition( 70, 10 )
     .setSize( 50, 10 );
-    cp5.addButton( "3-LINK")
+    cp5.addButton( "ThreeLinkArm")
     .setValue( 0 )
     .setPosition( 130, 10 )
     .setSize( 50, 10 );
-    cp5.addButton( "FORWARD")
+    cp5.addButton( "FORWARD_1")
     .setValue( 0 )
     .setPosition( 190, 10 )
     .setSize( 50, 10 );
-  cp5.addButton( "INVERSE")
+  cp5.addButton( "FORWARD_2")
     .setValue( 0 )
     .setPosition( 250, 10 )
+    .setSize( 50, 10 );
+  cp5.addButton( "FORWARD_3")
+    .setValue( 0 )
+    .setPosition( 310, 10 )
+    .setSize( 50, 10 );
+  cp5.addButton( "INVERSE")
+    .setValue( 0 )
+    .setPosition( 370, 10 )
     .setSize( 50, 10 );
     
     
@@ -237,6 +247,19 @@ void setup() {
     .setColor( #ffffff );
 } // end of setup()
 
+void matrixMult( float[][] M1, float M2[][] , int q) {
+  float[][] newM1 = {{ 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 }}; 
+  for ( int i=q; i<4; i++ ) {
+    for ( int j=0; j<3; j++ ) {
+      newM1[i][j] = (M1[i][0]*M2[j][0]) + (M1[i][1]*M2[j][1]) + (M1[i][2]*M2[j][2]);
+    }
+  }
+  for ( int i=q; i<4; i++ ) {
+    for ( int j=0; j<3; j++ ) {
+      M1[i][j] = newM1[i][j];
+    }
+  }
+}
 
 /**
  drawArm()
@@ -244,6 +267,7 @@ void setup() {
  **/
  void drawArm1() {
    numberOfLines = 1;
+   
   stroke( #0000ff );
   strokeWeight( 4 );
   line( P[0][0]+X_OFFSET, Y_OFFSET-P[0][1], P[1][0]+X_OFFSET, Y_OFFSET-P[1][1] );
@@ -263,6 +287,7 @@ void setup() {
  
  void drawArm2() {
    numberOfLines = 2;
+   
   stroke( #0000ff );
   strokeWeight( 4 );
   line( P[0][0]+X_OFFSET, Y_OFFSET-P[0][1], P[1][0]+X_OFFSET, Y_OFFSET-P[1][1] );
@@ -284,6 +309,7 @@ void setup() {
  
 void drawArm3() {
   numberOfLines = 3;
+  
   stroke( #0000ff );
   strokeWeight( 4 );
   line( P[0][0]+X_OFFSET, Y_OFFSET-P[0][1], P[1][0]+X_OFFSET, Y_OFFSET-P[1][1] );
@@ -351,19 +377,28 @@ public void controlEvent( ControlEvent theEvent ) {
         if ( Float.isNaN( theta0 )) {
           println( "ERROR in theta0 value" );
         } else {
+          float currentTheta = theta0value.toString().parseFloat();
           theta0input.setFocus( false );
           theta0input.setVisible( false );
           theta0value.setVisible( true );
           theta0value.setText( str( theta0 ));
           // set THETA from user
           THETA1 = theta0;
+          DR = THETA1 - currentTheta;
           // compute P1 --> Forward Kinematics!!
-          P[1][0] = L1 * cos( radians( THETA1 ));
-          P[1][1] = L1 * sin( radians( THETA1 ));
-          P[2][0] = (L1 + L2) * cos( radians( THETA1 ));
-          P[2][1] = (L1 + L2) * sin( radians( THETA1 ));
-          P[3][0] = (L1 + L2 + L3) * cos( radians( THETA1 ));
-          P[3][1] = (L1 + L2 + L3) * sin( radians( THETA1 ));
+          float oldX = P[0][0];
+          float oldY = P[0][1];
+          translationMatrix[0][2] = -oldX;
+          translationMatrix[1][2] = -oldY;
+          matrixMult(P, translationMatrix, 1);
+          
+          rotationMatrix[0][1] = -sin(radians(DR));
+          rotationMatrix[1][0] = sin(radians(DR));
+          matrixMult(P, rotationMatrix, 1);
+          
+          translationMatrix[0][2] = oldX;
+          translationMatrix[1][2] = oldY;
+          matrixMult(P, translationMatrix, 1);
           // set gui elements with computed values
           x1value.setText( str( P[1][0] ));
           y1value.setText( str( P[1][1] ));
@@ -384,10 +419,19 @@ public void controlEvent( ControlEvent theEvent ) {
           // set THETA from user
           THETA2 = theta1;
           // compute P2 --> Forward Kinematics!!
-          P[2][0] = (L1 + L2) * cos( radians( THETA2 ));
-          P[2][1] = (L1 + L2) * sin( radians( THETA2 ));
-          P[3][0] = (L1 + L2 + L3) * cos( radians( THETA2 ));
-          P[3][1] = (L1 + L2 + L3) * sin( radians( THETA2 ));
+          float oldX = P[1][0];
+          float oldY = P[1][1];
+          translationMatrix[0][2] = -oldX;
+          translationMatrix[1][2] = -oldY;
+          matrixMult(P, translationMatrix, 2);
+          
+          rotationMatrix[0][1] = -sin(radians(THETA2));
+          rotationMatrix[1][0] = sin(radians(THETA2));
+          matrixMult(P, rotationMatrix, 2);
+          
+          translationMatrix[0][2] = oldX;
+          translationMatrix[1][2] = oldY;
+          matrixMult(P, translationMatrix, 2);
           // set gui elements with computed values
           x2value.setText( str( P[2][0] ));
           y2value.setText( str( P[2][1] ));
@@ -406,8 +450,19 @@ public void controlEvent( ControlEvent theEvent ) {
           // set THETA from user
           THETA3 = theta2;
           // compute P2 --> Forward Kinematics!!
-          P[3][0] = (L1 + L2 + L3) * cos( radians( THETA3 ));
-          P[3][1] = (L1 + L2 + L3) * sin( radians( THETA3 ));
+          float oldX = P[2][0];
+          float oldY = P[2][1];
+          translationMatrix[0][2] = -oldX;
+          translationMatrix[1][2] = -oldY;
+          matrixMult(P, translationMatrix, 3);
+          
+          rotationMatrix[0][1] = -sin(radians(THETA3));
+          rotationMatrix[1][0] = sin(radians(THETA3));
+          matrixMult(P, rotationMatrix, 3);
+          
+          translationMatrix[0][2] = oldX;
+          translationMatrix[1][2] = oldY;
+          matrixMult(P, translationMatrix, 3);
           // set gui elements with computed values
           x3value.setText( str( P[3][0] ));
           y3value.setText( str( P[3][1] ));
@@ -424,30 +479,48 @@ public void controlEvent( ControlEvent theEvent ) {
  For Forward Kinematics, we have P0 and we ask for THETA from the user.
  Then we calculate P1.
  */
-public void FORWARD( int theValue ) {
+public void FORWARD_1( int theValue ) {
   println( "FORWARD KINEMATICS! Enter THETA0." );
   if ( init ) {
     theta0value.setVisible( false );
     theta0input.setVisible( true );
     theta0input.setFocus( true );
   }
+} 
+
+public void FORWARD_2( int theValue ) {
+  println( "FORWARD KINEMATICS! Enter THETA1." );
+  if ( init ) {
+    theta1value.setVisible( false );
+    theta1input.setVisible( true );
+    theta1input.setFocus( true );
+  }
+} 
+
+public void FORWARD_3( int theValue ) {
+  println( "FORWARD KINEMATICS! Enter THETA2." );
+  if ( init ) {
+    theta2value.setVisible( false );
+    theta2input.setVisible( true );
+    theta2input.setFocus( true );
+  }
 } // end of FORWARD callback function()
 
 
-public void ONELINK() {
+public void OneLinkArm(int theValue) {
   println( "DRAWING 1-LINK ARM" );
   if ( init ) {
     drawArm1();
   }
 }
 
-public void TWOLINK() {
+public void TwoLinkArm(int theValue) {
   println( "DRAWING21-LINK ARM" );
   if ( init ) {
     drawArm2();
   }
 }
-public void THREELINK() {
+public void ThreeLinkArm(int theValue) {
   println( "DRAWING 3-LINK ARM" );
   if ( init ) {
     drawArm3();
@@ -487,5 +560,12 @@ void draw() {
   line( 10, 330, 510, 330 );
   line( 260, 80, 260, 580 );
   // draw arm
-  drawArm1();
+  if(numberOfLines == 1 || numberOfLines == 0 ){
+    drawArm1();
+  }else if(numberOfLines == 2){
+    drawArm2();
+  }else if(numberOfLines == 3){
+    drawArm3();
+  }
+  //drawArm1();
 } // end of draw()
