@@ -227,7 +227,7 @@ Pair<Integer, Integer> navigate(){
         roads.clear();
         roads.add(i);
         maxVal = sensors[i];
-      }else if(sensors[i] <= maxVal && sensors[i] > maxVal - 10){
+      }else if(sensors[i] == maxVal){
         roads.add(i);
       }
     }
