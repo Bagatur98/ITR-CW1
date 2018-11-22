@@ -3,6 +3,7 @@
  * potential field for mobile robot: basic code
  */
 import javafx.util.Pair;
+import java.util.Random;
 
 int MAX_X = 20;
 int MAX_Y = 20;
@@ -11,7 +12,7 @@ int MIN_FORCE = 1; // minimum force for potential field
 int MAX_FORCE = ( MAX_X * MAX_Y ); // maximum force for potential field
 int FONT_SIZE = 10;
 
-int NUM_OBSTACLES = int(( MAX_X * MAX_Y ) * 0.25 ); // number of obstacles in robot's world
+int NUM_OBSTACLES = int(( MAX_X * MAX_Y ) * 0.6 ); // number of obstacles in robot's world
 int CELL_EMPTY = 0; 
 int CELL_OBSTACLE = -1;
 int CELL_TARGET = MAX_FORCE;
@@ -29,6 +30,7 @@ boolean searching;
 ArrayList<Pair<Integer, Integer>> inside = new ArrayList<Pair<Integer, Integer>>();
 ArrayList<Pair<Integer, Integer>> outside = new ArrayList<Pair<Integer, Integer>>();
 ArrayList<Pair<Integer, Integer>> outsideNew = new ArrayList<Pair<Integer, Integer>>();
+ArrayList<Pair<Integer, Integer>> visited = new ArrayList<Pair<Integer, Integer>>();
 /**
  * setup()
  */
@@ -68,6 +70,7 @@ void initWorld() {
   inside.clear();
   outside.clear();
   outsideNew.clear();
+  visited.clear();
   // initialise the world to all empty cells
   for ( int y=0; y<MAX_Y; y++ ) {
     for ( int x=0; x<MAX_X; x++ ) {
@@ -81,7 +84,6 @@ void initWorld() {
   int dab = 1;
   
   while(inside.size() < MAX_FORCE){
-    System.out.println(outside.size());
     for(Pair<Integer, Integer> e : outside ){
       for(int i = 0; i < 8; i++){
         int cell_y = e.getKey() + SENSORS_Y_DIR[i];
@@ -175,11 +177,17 @@ void keyPressed() {
     } else if (( key == CODED ) && ( keyCode == RIGHT )) {
       try_x = int(R.x) + 1;
     }else if(key == 'N' || key == 'n'){
-      
+      Pair<Integer, Integer> nextSquare = navigate();
+      try_y = nextSquare.getKey();
+      try_x = nextSquare.getValue();
+    }else{
+      return;
     }
     if ( collide( try_x, try_y )) {
       println( "oops! an obstacle!" );
     } else {
+      Pair<Integer, Integer> visitedCoords = new Pair(int(R.y), int(R.x));
+      visited.add(visitedCoords);
       R.x = try_x;
       R.y = try_y;
       if ( world[int(R.y)][int(R.x)] == CELL_TARGET ) {
@@ -194,6 +202,41 @@ void keyPressed() {
   }
 } // end of keyPressed()
 
+
+Pair<Integer, Integer> navigate(){ 
+  int maxVal = 0;
+  ArrayList<Integer> roads = new ArrayList<Integer>();
+  for(int i = 0; i < 8; i++){ 
+    int cell_y = int(R.y) + SENSORS_Y_DIR[i];
+    int cell_x = int(R.x) + SENSORS_X_DIR[i];
+    Pair<Integer, Integer>  trySquare = new Pair(cell_y, cell_x);
+    if(!visited.contains(trySquare)){
+      if (sensors[i] > maxVal){
+        roads.clear();
+        roads.add(i);
+        maxVal = sensors[i];
+      }else if(sensors[i] == maxVal){
+        roads.add(i);
+      }
+    }
+  }
+  if(maxVal == 0 || maxVal == 1){   //if robot gets surrounded by obstacles and already visited fields, clear visited and try again
+    visited.clear();
+    for(int i = 0; i < 8; i++){        
+      if (sensors[i] > maxVal){
+        roads.clear();
+        roads.add(i);
+        maxVal = sensors[i];
+      }else if(sensors[i] <= maxVal && sensors[i] > maxVal - 10){
+        roads.add(i);
+      }
+    }
+  }
+  Random randomizer = new Random();
+  int maxI = roads.get(randomizer.nextInt(roads.size()));
+  Pair<Integer, Integer> nextPos = new Pair(int(R.y) + SENSORS_Y_DIR[maxI], int(R.x) + SENSORS_X_DIR[maxI]);
+  return nextPos;
+}
 
 /**
  * validCell()
